@@ -81,6 +81,9 @@ def broadcast_index(
     given. Additional dimensions may need to be mapped to 0 or
     removed.
 
+    big_shape是shape通过broadcast得到的shape
+    现在使用这个方法将big_shape下的big_index转换为shape下的out_index
+
     Args:
         big_index : multidimensional index of bigger tensor
         big_shape : tensor shape of bigger tensor
@@ -90,13 +93,26 @@ def broadcast_index(
     Returns:
         None
     """
-    # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    assert len(big_index) == len(big_shape)
+    assert len(shape) == len(out_index)
+    
+    i = len(out_index) - 1
+    for b_dim, s_dim, b_idx in zip(reversed(big_shape), reversed(shape), reversed(big_index)):
+        if b_dim == s_dim:
+            out_index[i] = b_idx
+        elif s_dim == 1:
+            out_index[i] = 0
+        else:
+            raise IndexingError(f"{shape} cannot broadcast to {big_shape}")
+        i -= 1
 
 
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
     """
     Broadcast two shapes to create a new union shape.
+
+    根据两个shape broadcast到一个最小兼容两个shape的shape
+    例如: (5,1,5,1) + (1,5,1,5) => (5,5,5,5)
 
     Args:
         shape1 : first shape
@@ -108,8 +124,18 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
     Raises:
         IndexingError : if cannot broadcast
     """
-    # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    
+    bc_shape = []
+    for dim1, dim2 in zip(reversed(shape1), reversed(shape2)):
+        if dim1 == dim2:
+            bc_shape.append(dim1)
+        elif dim1 == 1 or dim2 == 1:
+            bc_shape.append(dim1 if dim2 == 1 else dim2)
+        else:
+            raise IndexingError(f"{shape1} and {shape2} cannot broadcast")
+    large_shape = shape1 if len(shape1) > len(shape2) else shape2
+    diff = abs(len(shape1) - len(shape2))
+    return tuple(large_shape[:diff]) + tuple(reversed(bc_shape))
 
 
 def strides_from_shape(shape: UserShape) -> UserStrides:
