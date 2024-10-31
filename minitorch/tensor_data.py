@@ -35,6 +35,9 @@ def index_to_position(index: Index, strides: Strides) -> int:
     Converts a multidimensional tensor `index` into a single-dimensional position in
     storage based on strides.
 
+    因为真实的数据在TensorData中是存在一个一维数组中的
+    这个函数就是将 对逻辑上多维数组的索引 转换为 对物理上一维数组的索引
+
     Args:
         index : index tuple of ints
         strides : tensor strides
@@ -43,8 +46,10 @@ def index_to_position(index: Index, strides: Strides) -> int:
         Position in storage
     """
 
-    # TODO: Implement for Task 2.1.
-    raise NotImplementedError("Need to implement for Task 2.1")
+    position = 0
+    for idx, dim_stride in zip(index, strides):
+        position += idx * dim_stride
+    return position
 
 
 def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
@@ -60,8 +65,10 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
         out_index : return index corresponding to position.
 
     """
-    # TODO: Implement for Task 2.1.
-    raise NotImplementedError("Need to implement for Task 2.1")
+    dims = [i for i in range(len(shape))]
+    for i in reversed(dims):
+        out_index[i] = ordinal % shape[i]
+        ordinal /= shape[i]
 
 
 def broadcast_index(
@@ -115,7 +122,7 @@ def strides_from_shape(shape: UserShape) -> UserStrides:
 
 
 class TensorData:
-    _storage: Storage
+    _storage: Storage # actual data storing in a 1-D array
     _strides: Strides
     _shape: Shape
     strides: UserStrides
@@ -144,7 +151,7 @@ class TensorData:
         self._shape = array(shape)
         self.strides = strides
         self.dims = len(strides)
-        self.size = int(prod(shape))
+        self.size = int(prod(shape)) # number of elements in Tensor
         self.shape = shape
         assert len(self._storage) == self.size
 
@@ -211,6 +218,10 @@ class TensorData:
     def permute(self, *order: int) -> TensorData:
         """
         Permute the dimensions of the tensor.
+        
+        假如原来的storage是连续的话
+        permute()之后 虽然是同一个storage 但是不再连续！
+        不仅要置换shape 同时还需要置换strides
 
         Args:
             order (list): a permutation of the dimensions
@@ -222,8 +233,12 @@ class TensorData:
             range(len(self.shape))
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
 
-        # TODO: Implement for Task 2.1.
-        raise NotImplementedError("Need to implement for Task 2.1")
+        new_shape = [0] * len(self.shape)
+        new_strides = [0] * len(self.strides)
+        for i, j in zip(range(len(new_shape)), order):
+            new_shape[i] = self.shape[j]
+            new_strides[i] = self.strides[j]
+        return TensorData(self._storage, tuple(new_shape), tuple(new_strides))
 
     def to_string(self) -> str:
         s = ""
