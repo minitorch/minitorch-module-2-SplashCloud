@@ -8,21 +8,36 @@ import minitorch
 
 
 class Network(minitorch.Module):
-    def __init__(self, hidden_layers):
+    def __init__(self, hidden_layers, in_size, out_size, hidden_size=8):
         super().__init__()
-        raise NotImplementedError("Need to include this file from past assignment.")
+        self.hidden_layers = hidden_layers
+        self.layers = []
+        hidden_in_size = in_size
+        hidden_out_size = in_size
+        for i in range(1, hidden_layers+1):
+            hidden_out_size = hidden_size
+            self.layers.append(
+                self.add_module(f"layer{i}", Linear(hidden_in_size, hidden_out_size))
+            )
+            hidden_in_size = hidden_size
+        self.output = Linear(hidden_out_size, out_size)
+        
 
     def forward(self, x):
-        middle = [h.relu() for h in self.layer1.forward(x)]
-        end = [h.relu() for h in self.layer2.forward(middle)]
-        return self.layer3.forward(end)[0].sigmoid()
+        middle = x
+        for i in range(self.hidden_layers):
+            middle = [h.relu() for h in self.layers[i].forward(middle)]
+        return self.output.forward(middle)[0].sigmoid()
+        # middle = [h.relu() for h in self.layer1.forward(x)]
+        # end = [h.relu() for h in self.layer2.forward(middle)]
+        # return self.layer3.forward(end)[0].sigmoid()
 
 
 class Linear(minitorch.Module):
     def __init__(self, in_size, out_size):
         super().__init__()
-        self.weights = []
-        self.bias = []
+        self.weights = [] # in_size x out_size
+        self.bias = [] # 1 x out_size
         for i in range(in_size):
             self.weights.append([])
             for j in range(out_size):
@@ -39,7 +54,22 @@ class Linear(minitorch.Module):
             )
 
     def forward(self, inputs):
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # input: in_size
+        assert len(inputs) == len(self.weights)
+        in_size = len(self.weights)
+        out_size = len(self.weights[0])
+        res = [] # m x out_size
+        # inputs X weights
+        for j in range(out_size):
+            ele = 0.0
+            for k in range(in_size):
+                ele += inputs[k] * self.weights[k][j].value
+            res.append(ele)
+        # + bias
+        for j in range(out_size):
+            res[j] += self.bias[j].value
+        return res
+
 
 
 def default_log_fn(epoch, total_loss, correct, losses):
@@ -49,7 +79,7 @@ def default_log_fn(epoch, total_loss, correct, losses):
 class ScalarTrain:
     def __init__(self, hidden_layers):
         self.hidden_layers = hidden_layers
-        self.model = Network(self.hidden_layers)
+        self.model = Network(self.hidden_layers, in_size=2, out_size=1)
 
     def run_one(self, x):
         return self.model.forward(
@@ -59,7 +89,7 @@ class ScalarTrain:
     def train(self, data, learning_rate, max_epochs=500, log_fn=default_log_fn):
         self.learning_rate = learning_rate
         self.max_epochs = max_epochs
-        self.model = Network(self.hidden_layers)
+        self.model = Network(self.hidden_layers, in_size=2, out_size=1)
         optim = minitorch.SGD(self.model.parameters(), learning_rate)
 
         losses = []
