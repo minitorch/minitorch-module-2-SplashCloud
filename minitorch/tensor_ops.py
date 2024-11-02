@@ -84,6 +84,8 @@ class TensorBackend:
         self.relu_back_zip = ops.zip(operators.relu_back)
         self.log_back_zip = ops.zip(operators.log_back)
         self.inv_back_zip = ops.zip(operators.inv_back)
+        self.sigmoid_back_zip = ops.zip(operators.sigmoid_back)
+        self.exp_back_zip = ops.zip(operators.exp_back)
 
         # Reduce
         self.add_reduce = ops.reduce(operators.add, 0.0)

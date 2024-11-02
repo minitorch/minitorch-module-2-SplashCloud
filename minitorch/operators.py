@@ -81,6 +81,11 @@ def log_back(a: float, b: float) -> float:
     raise ValueError("The domain must be > 0.")
 
 
+def exp_back(a: float, b: float) -> float:
+    """Compute the derivative of exp times a second arg"""
+    return math.exp(a) * b
+
+
 def inv_back(a: float, b: float) -> float:
     """Compute the derivative of inv times a second arg"""
     if a != 0:
