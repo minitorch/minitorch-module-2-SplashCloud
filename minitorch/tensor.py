@@ -347,7 +347,7 @@ class Tensor:
         assert self.history is not None
         return self.history.inputs
 
-    def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+    def chain_rule(self, d_output: Any, ids: dict[int, str] = None) -> Iterable[Tuple[Variable, Any]]:
         h = self.history
         assert h is not None
         assert h.last_fn is not None
@@ -355,16 +355,18 @@ class Tensor:
 
         x = h.last_fn._backward(h.ctx, d_output)
         assert len(x) == len(h.inputs), f"Bug in function {h.last_fn}"
+        if ids != None and self.unique_id in ids.keys():
+            print(f"(node={ids[self.unique_id]}, d_output={d_output}, inputs={x})")
         return [
             (inp, inp.expand(self._ensure_tensor(d_in)))
             for inp, d_in in zip(h.inputs, x)
         ]
 
-    def backward(self, grad_output: Optional[Tensor] = None) -> None:
+    def backward(self, grad_output: Optional[Tensor] = None, ids: dict[int, str] = None) -> None:
         if grad_output is None:
             assert self.shape == (1,), "Must provide grad_output if non-scalar"
             grad_output = Tensor.make([1.0], (1,), backend=self.backend)
-        backpropagate(self, grad_output)
+        backpropagate(self, grad_output, ids=ids)
 
     def zero_grad_(self) -> None:  # pragma: no cover
         """

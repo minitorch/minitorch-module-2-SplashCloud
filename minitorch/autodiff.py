@@ -53,7 +53,7 @@ class Variable(Protocol):
     def parents(self) -> Iterable["Variable"]:
         pass
 
-    def chain_rule(self, d_output: Any) -> Iterable[Tuple["Variable", Any]]:
+    def chain_rule(self, d_output: Any, ids: dict[int, str] = None) -> Iterable[Tuple["Variable", Any]]:
         pass
 
 
@@ -67,20 +67,27 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     Returns:
         Non-constant Variables in topological order starting from the right.
     """
-    res = {variable.unique_id: variable}
-    queue = [variable]
-    while len(queue) > 0:
-        node = queue.pop(0)
-        inputs = node.parents
-        for input in inputs:
-            if input.is_constant():
-                continue
-            res[input.unique_id] = input # prevent the duplicated nodes
-            queue.append(input)
-    return list(res.values())
+    # # # # # # # # # # # # # # # # # # # BUG # # # # # # # # # # # # # # # # # # # # #
+    # 下面的实现是错误的，通过广度优先来遍历计算图，并没有实现拓扑排序                      #
+    # n5 -> n4 -> n2 -> n1                                                            #
+    # n5 -------> n3 -> n1                                                            #
+    # 上面这个例子: 首先访问n1, 然后访问n2, n3, 然后访问n5(n3的输入), 再访问n4(n2的输入)   #
+    #              这里访问n4和n5的顺序就颠倒了                                         #
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    res = {variable.unique_id: variable}                                            
+    queue = [variable]                                                              
+    while len(queue) > 0:                                                           
+        node = queue.pop(0)                                                         
+        inputs = node.parents                                                       
+        for input in inputs:                                                        
+            if input.is_constant():                                                 
+                continue                                                            
+            res[input.unique_id] = input # prevent the duplicated nodes             
+            queue.append(input)                                                     
+    return list(res.values())                                                       
 
 
-def backpropagate(variable: Variable, deriv: Any) -> None:
+def backpropagate(variable: Variable, deriv: Any, ids: dict[int, str] = None) -> None:
     """
     Runs backpropagation on the computation graph in order to
     compute derivatives for the leave nodes.
@@ -100,7 +107,7 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
         if node.is_leaf():
             node.accumulate_derivative(sum(dict[node.unique_id]))
             continue
-        pairs = node.chain_rule(sum(dict[node.unique_id]))
+        pairs = node.chain_rule(sum(dict[node.unique_id]), ids)
         for pair in pairs:
             if pair[0].unique_id not in dict.keys():
                 dict[pair[0].unique_id] = []

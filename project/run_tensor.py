@@ -61,7 +61,7 @@ class TensorTrain:
     def run_many(self, X):
         return self.model.forward(minitorch.tensor(X))
 
-    def train(self, data, learning_rate, max_epochs=500, log_fn=default_log_fn):
+    def train(self, data, learning_rate, max_epochs=10, log_fn=default_log_fn):
 
         self.learning_rate = learning_rate
         self.max_epochs = max_epochs
@@ -78,11 +78,24 @@ class TensorTrain:
             optim.zero_grad()
 
             # Forward
-            out = self.model.forward(X).view(data.N)
-            prob = (out * y) + (out - 1.0) * (y - 1.0)
-
-            loss = -prob.log()
-            (loss / data.N).sum().view(1).backward()
+            out = self.model.forward(X)
+            out = out.view(data.N)
+            # prob = (out * y) + (out - 1.0) * (y - 1.0)
+            v1 = out - 1.0
+            v2 = out * y
+            v3 = y - 1.0
+            v4 = v1 * v3
+            # prob = v2 + v4
+            prob = v4 + v2
+            v5 = prob.log()
+            loss = -v5
+            # loss = -prob.log()
+            v6 = loss / data.N
+            v7 = v6.sum()
+            v8 = v7.view(1)
+            ids = {out.unique_id: "out", v1.unique_id: "v1", v2.unique_id: "v2"}
+            v8.backward(ids=ids)
+            # (loss / data.N).sum().view(1).backward()
             total_loss = loss.sum().view(1)[0]
             losses.append(total_loss)
 
@@ -90,14 +103,14 @@ class TensorTrain:
             optim.step()
 
             # Logging
-            if epoch % 10 == 0 or epoch == max_epochs:
+            if epoch % 1 == 0 or epoch == max_epochs:
                 y2 = minitorch.tensor(data.y)
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
                 log_fn(epoch, total_loss, correct, losses)
 
 
 if __name__ == "__main__":
-    PTS = 50
+    PTS = 10
     HIDDEN = 2
     RATE = 0.5
     data = minitorch.datasets["Simple"](PTS)
