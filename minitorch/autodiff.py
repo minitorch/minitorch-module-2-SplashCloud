@@ -67,17 +67,24 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     Returns:
         Non-constant Variables in topological order starting from the right.
     """
-    res = {variable.unique_id: variable}
-    queue = [variable]
-    while len(queue) > 0:
-        node = queue.pop(0)
-        inputs = node.parents
-        for input in inputs:
-            if input.is_constant():
-                continue
-            res[input.unique_id] = input # prevent the duplicated nodes
-            queue.append(input)
-    return list(res.values())
+    # # # # # # # # # # # # # # # # # # # BUG # # # # # # # # # # # # # # # # # # # # #
+    # Need to use DFS to implement the topological order, instead of BFS              #
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    res = []
+    visited = set()
+
+    def dfs(node: Variable):
+        if node.is_constant():
+            return
+        if node.unique_id in visited:
+            return
+        for parent in node.parents:
+            dfs(parent)
+        visited.add(node.unique_id)
+        res.append(node)
+    
+    dfs(variable)
+    return list(reversed(res))
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
