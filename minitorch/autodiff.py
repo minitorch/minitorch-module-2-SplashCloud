@@ -22,7 +22,14 @@ def central_difference(f: Any, *vals: Any, arg: int = 0, epsilon: float = 1e-6) 
     Returns:
         An approximation of $f'_i(x_0, \ldots, x_{n-1})$
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    def add_delta(val: Any, delta: float) -> Any:
+        return val + delta
+    
+    args1 = list(vals)
+    args2 = list(vals)
+    args1[arg] = add_delta(args1[arg], epsilon/2)
+    args2[arg] = add_delta(args2[arg], -epsilon/2)
+    return (f(*args1) - f(*args2)) / epsilon
 
 
 variable_count = 1
@@ -60,7 +67,24 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     Returns:
         Non-constant Variables in topological order starting from the right.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # # # # # # # # # # # # # # # # # # # BUG # # # # # # # # # # # # # # # # # # # # #
+    # Need to use DFS to implement the topological order, instead of BFS              #
+    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+    res = []
+    visited = set()
+
+    def dfs(node: Variable):
+        if node.is_constant():
+            return
+        if node.unique_id in visited:
+            return
+        for parent in node.parents:
+            dfs(parent)
+        visited.add(node.unique_id)
+        res.append(node)
+    
+    dfs(variable)
+    return list(reversed(res))
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -74,8 +98,20 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
 
+    # 1. get the topological node sequence
+    sequence = topological_sort(variable)
+    out = sequence[0]
+    dict = {out.unique_id: [deriv]}
+    for node in sequence:
+        if node.is_leaf():
+            node.accumulate_derivative(sum(dict[node.unique_id]))
+            continue
+        pairs = node.chain_rule(sum(dict[node.unique_id]))
+        for pair in pairs:
+            if pair[0].unique_id not in dict.keys():
+                dict[pair[0].unique_id] = []
+            dict[pair[0].unique_id].append(pair[1])
 
 @dataclass
 class Context:

@@ -4,11 +4,11 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 
 class Module:
-    """
-    Modules form a tree that store parameters and other
+    """Modules form a tree that store parameters and other
     submodules. They make up the basis of neural network stacks.
 
-    Attributes:
+    Attributes
+    ----------
         _modules : Storage of the child modules
         _parameters : Storage of the module's parameters
         training : Whether the module is in training mode or evaluation mode
@@ -25,46 +25,72 @@ class Module:
         self.training = True
 
     def modules(self) -> Sequence[Module]:
-        "Return the direct child modules of this module."
+        """Return the direct child modules of this module."""
         m: Dict[str, Module] = self.__dict__["_modules"]
         return list(m.values())
 
     def train(self) -> None:
-        "Set the mode of this module and all descendent modules to `train`."
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the mode of this module and all descendent modules to `train`."""
+        self.training = True
+        for module in self.modules():
+            module.training = True
 
     def eval(self) -> None:
-        "Set the mode of this module and all descendent modules to `eval`."
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Set the mode of this module and all descendent modules to `eval`."""
+        self.training = False
+        for module in self.modules():
+            module.training = False
 
     def named_parameters(self) -> Sequence[Tuple[str, Parameter]]:
-        """
-        Collect all the parameters of this module and its descendents.
+        """Collect all the parameters of this module and its descendents.
 
-
-        Returns:
+        Returns
+        -------
             The name and `Parameter` of each ancestor parameter.
+
         """
-        raise NotImplementedError("Need to include this file from past assignment.")
+        named_paras: Sequence[Tuple[str, Parameter]] = []
+        # add the named_parameters of itself
+        p: Dict[str, Parameter] = self.__dict__["_parameters"]
+        for k, v in p.items():
+            named_paras.append((k, v))
+        # add the named_parameters of its descendents
+        m: Dict[str, Module] = self.__dict__["_modules"]
+        for mod_name, mod in m.items():
+            for para_name, para in mod.named_parameters():
+                named_paras.append((f"{mod_name}.{para_name}", para))
+        return named_paras
 
     def parameters(self) -> Sequence[Parameter]:
-        "Enumerate over all the parameters of this module and its descendents."
-        raise NotImplementedError("Need to include this file from past assignment.")
+        """Enumerate over all the parameters of this module and its descendents."""
+        paras: Sequence[Parameter] = []
+        p: Dict[str, Parameter] = self.__dict__["_parameters"]
+        for v in p.values():
+            paras.append(v)
+        for m in self.modules():
+            paras.extend(m.parameters())
+        return paras
 
     def add_parameter(self, k: str, v: Any) -> Parameter:
-        """
-        Manually add a parameter. Useful helper for scalar parameters.
+        """Manually add a parameter. Useful helper for scalar parameters.
 
         Args:
+        ----
             k: Local name of the parameter.
             v: Value for the parameter.
 
         Returns:
+        -------
             Newly created parameter.
+
         """
         val = Parameter(v, k)
         self.__dict__["_parameters"][k] = val
         return val
+    
+    def add_module(self, k: str, v: Module) -> Module:
+        self.__dict__["_modules"][k] = v
+        return v
 
     def __setattr__(self, key: str, val: Parameter) -> None:
         if isinstance(val, Parameter):
@@ -83,6 +109,7 @@ class Module:
         return None
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Invoke the module"""
         return self.forward(*args, **kwargs)
 
     def __repr__(self) -> str:
@@ -114,8 +141,7 @@ class Module:
 
 
 class Parameter:
-    """
-    A Parameter is a special container stored in a `Module`.
+    """A Parameter is a special container stored in a `Module`.
 
     It is designed to hold a `Variable`, but we allow it to hold
     any value for testing.
@@ -130,7 +156,7 @@ class Parameter:
                 self.value.name = self.name
 
     def update(self, x: Any) -> None:
-        "Update the parameter value."
+        """Update the parameter value."""
         self.value = x
         if hasattr(x, "requires_grad_"):
             self.value.requires_grad_(True)

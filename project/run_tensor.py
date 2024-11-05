@@ -21,8 +21,9 @@ class Network(minitorch.Module):
         self.layer3 = Linear(hidden_layers, 1)
 
     def forward(self, x):
-        # TODO: Implement for Task 2.5.
-        raise NotImplementedError("Need to implement for Task 2.5")
+        middle = self.layer1.forward(x).relu()
+        end = self.layer2.forward(middle).relu()
+        return self.layer3.forward(end).sigmoid()
 
 
 class Linear(minitorch.Module):
@@ -33,8 +34,16 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
-        # TODO: Implement for Task 2.5.
-        raise NotImplementedError("Need to implement for Task 2.5")
+        # # # # # # # # # # # # # # # # # # # BUG # # # # # # # # # # # # # # # # # # # # #
+        # return x @ self.weights + self.bias                                             #
+        # But `matrix_multiply()` is not implemented, and `@` is not used until Module3   #
+        # You can't do the multiplication by hand,                                        #
+        #           because it can't make the gradient work (not by the tensor operation) #
+        # So you should use other tensor operations to implement @ function               #
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+        # x = (m, in_size), self.weights = (in_size, out_size), self.bias = (out_size,)
+        z = (x.view(*x.shape, 1) * self.weights.value.view(1, *self.weights.value.shape)).sum(1)
+        return z.view(x.shape[0], self.out_size) + self.bias.value.view(1, *self.bias.value.shape)
 
 
 def default_log_fn(epoch, total_loss, correct, losses):
